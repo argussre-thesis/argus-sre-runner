@@ -8,6 +8,8 @@
     "node": ">=24"
   },
   "scripts": {
+    "start": "node src/index.ts",
+    "dev": "node --env-file=dev/runner.env src/index.ts",
     "typecheck": "tsc --noEmit",
     "dev:gateway": "node dev/gateway.ts"
   },
