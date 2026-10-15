@@ -16,7 +16,7 @@ const SLOW_RETRY_MS = 30_000;
 
 export type RunnerSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
-export function connect(config: Config, ops: string[]): RunnerSocket {
+export function connect(config: Config, ops: string[]): { socket: RunnerSocket; stop: () => void } {
   const auth: RunnerAuth = {
     token: config.token,
     clusterName: config.clusterName,
@@ -28,9 +28,10 @@ export function connect(config: Config, ops: string[]): RunnerSocket {
 
   socket.on("connect", () => log("info", "connected to gateway", { url: config.gatewayUrl, socketId: socket.id }));
   // Socket.IO gives up when the gateway refuses or drops us, so we retry ourselves, slowly.
+  let retryTimer: NodeJS.Timeout | undefined;
   const retrySlowly = (msg: string, fields: Record<string, unknown>) => {
     log("error", msg, { ...fields, retryInMs: SLOW_RETRY_MS });
-    setTimeout(() => socket.connect(), SLOW_RETRY_MS);
+    retryTimer = setTimeout(() => socket.connect(), SLOW_RETRY_MS);
   };
 
   socket.on("disconnect", (reason) => {
@@ -49,5 +50,11 @@ export function connect(config: Config, ops: string[]): RunnerSocket {
     retrySlowly("refused by gateway", { code, error: err.message });
   });
 
-  return socket;
+  // A client-side disconnect is final: Socket.IO won't reconnect, and the pending retry is cancelled.
+  const stop = () => {
+    clearTimeout(retryTimer);
+    socket.disconnect();
+  };
+
+  return { socket, stop };
 }
