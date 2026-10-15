@@ -27,17 +27,26 @@ export function connect(config: Config, ops: string[]): RunnerSocket {
   const socket: RunnerSocket = io(config.gatewayUrl, { path: RUNNER_PATH, auth });
 
   socket.on("connect", () => log("info", "connected to gateway", { url: config.gatewayUrl, socketId: socket.id }));
-  socket.on("disconnect", (reason) => log("warn", "disconnected from gateway", { reason }));
+  // Socket.IO gives up when the gateway refuses or drops us, so we retry ourselves, slowly.
+  const retrySlowly = (msg: string, fields: Record<string, unknown>) => {
+    log("error", msg, { ...fields, retryInMs: SLOW_RETRY_MS });
+    setTimeout(() => socket.connect(), SLOW_RETRY_MS);
+  };
+
+  socket.on("disconnect", (reason) => {
+    if (reason === "io server disconnect") {
+      return retrySlowly("dropped by gateway: another runner connected with this token, or the token was revoked", { reason });
+    }
+    log("warn", "disconnected from gateway", { reason });
+  });
   socket.on("connect_error", (err) => {
     // Still active = a network problem, and Socket.IO retries by itself.
     if (socket.active) {
       log("warn", "cannot connect to gateway", { error: err.message });
       return;
     }
-    // Not active = the gateway refused us. Socket.IO gives up here, so retry ourselves, slowly.
     const { code } = (err as Error & { data?: ConnectErrorData }).data ?? {};
-    log("error", "refused by gateway", { code, error: err.message, retryInMs: SLOW_RETRY_MS });
-    setTimeout(() => socket.connect(), SLOW_RETRY_MS);
+    retrySlowly("refused by gateway", { code, error: err.message });
   });
 
   return socket;

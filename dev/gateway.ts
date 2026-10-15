@@ -2,7 +2,7 @@
 
 import { createServer } from "node:http";
 import express from "express";
-import { Server } from "socket.io";
+import { Server, type Socket } from "socket.io";
 import { log } from "../src/log.ts";
 import {
   MAX_MESSAGE_BYTES,
@@ -23,9 +23,19 @@ const DEV_TOKENS = new Map([
   ["dev-token-local", { tenantId: "t_dev", clusterName: "local-dev" }],
 ]);
 
+// Set by the middleware once the token is verified.
+interface SocketData {
+  tenantId: string;
+  clusterName: string;
+}
+type RunnerSocket = Socket<ClientToServerEvents, ServerToClientEvents, Record<never, never>, SocketData>;
+
+// One live connection per tenant + cluster, keyed "tenantId/clusterName". Ops will be routed through this.
+const runners = new Map<string, RunnerSocket>();
+
 const app = express();
 const httpServer = createServer(app);
-const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
+const io = new Server<ClientToServerEvents, ServerToClientEvents, Record<never, never>, SocketData>(httpServer, {
   path: RUNNER_PATH,
   maxHttpBufferSize: MAX_MESSAGE_BYTES,
   pingInterval: 25_000, // Socket.IO's default, written out because the protocol relies on it
@@ -46,15 +56,28 @@ io.use((socket, next) => {
   if (!cluster || cluster.clusterName !== clusterName) {
     return refuse("UNAUTHORIZED", "invalid token, or the token belongs to another cluster");
   }
+  socket.data = { tenantId: cluster.tenantId, clusterName: cluster.clusterName };
   next();
 });
 
 io.on("connection", (socket) => {
-  const { clusterName, runnerVersion, protocolVersion, ops } = socket.handshake.auth as RunnerAuth;
-  log("info", "runner connected", { socketId: socket.id, clusterName, runnerVersion, protocolVersion, ops });
+  const { tenantId, clusterName } = socket.data;
+  const { runnerVersion, protocolVersion, ops } = socket.handshake.auth as RunnerAuth;
+  const key = `${tenantId}/${clusterName}`;
+
+  // Newest wins: the old connection is either dead and not noticed yet, or a second runner with the same token.
+  const previous = runners.get(key);
+  if (previous) {
+    log("warn", "runner replaced by a newer connection", { tenantId, clusterName, oldSocketId: previous.id, newSocketId: socket.id });
+    previous.disconnect(true);
+  }
+  runners.set(key, socket);
+  log("info", "runner connected", { socketId: socket.id, tenantId, clusterName, runnerVersion, protocolVersion, ops });
 
   socket.on("disconnect", (reason) => {
-    log("info", "runner disconnected", { socketId: socket.id, clusterName, reason });
+    // Only remove our own entry: a replaced connection must not unregister the one that replaced it.
+    if (runners.get(key) === socket) runners.delete(key);
+    log("info", "runner disconnected", { socketId: socket.id, tenantId, clusterName, reason });
   });
 });
 
