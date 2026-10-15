@@ -1,0 +1,20 @@
+{
+  "name": "argus-runner",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Connects outbound to the Argus gateway and runs read-only ops in the cluster",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "socket.io-client": "^4.8.4"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "typescript": "^7.0.2"
+  }
+}
