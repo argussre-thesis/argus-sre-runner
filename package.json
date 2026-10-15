@@ -11,6 +11,7 @@
     "start": "node src/index.ts",
     "dev": "node --env-file=dev/runner.env src/index.ts",
     "typecheck": "tsc --noEmit",
+    "test": "node --test --test-timeout=10000 --test-force-exit \"test/**/*.test.ts\"",
     "dev:gateway": "node dev/gateway.ts"
   },
   "dependencies": {

@@ -16,7 +16,12 @@ const SLOW_RETRY_MS = 30_000;
 
 export type RunnerSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
-export function connect(config: Config, ops: string[]): { socket: RunnerSocket; stop: () => void } {
+// slowRetryMs is only changed by tests.
+export function connect(
+  config: Config,
+  ops: string[],
+  slowRetryMs = SLOW_RETRY_MS,
+): { socket: RunnerSocket; stop: () => void } {
   const auth: RunnerAuth = {
     token: config.token,
     clusterName: config.clusterName,
@@ -24,14 +29,15 @@ export function connect(config: Config, ops: string[]): { socket: RunnerSocket; 
     protocolVersion: PROTOCOL_VERSION,
     ops,
   };
-  const socket: RunnerSocket = io(config.gatewayUrl, { path: RUNNER_PATH, auth });
+  // WebSocket only: no HTTP long-polling start and upgrade (see CONTEXT §5.3).
+  const socket: RunnerSocket = io(config.gatewayUrl, { path: RUNNER_PATH, auth, transports: ["websocket"] });
 
   socket.on("connect", () => log("info", "connected to gateway", { url: config.gatewayUrl, socketId: socket.id }));
   // Socket.IO gives up when the gateway refuses or drops us, so we retry ourselves, slowly.
   let retryTimer: NodeJS.Timeout | undefined;
   const retrySlowly = (msg: string, fields: Record<string, unknown>) => {
-    log("error", msg, { ...fields, retryInMs: SLOW_RETRY_MS });
-    retryTimer = setTimeout(() => socket.connect(), SLOW_RETRY_MS);
+    log("error", msg, { ...fields, retryInMs: slowRetryMs });
+    retryTimer = setTimeout(() => socket.connect(), slowRetryMs);
   };
 
   socket.on("disconnect", (reason) => {
