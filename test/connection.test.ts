@@ -7,6 +7,8 @@ import { test, type TestContext } from "node:test";
 import { Server } from "socket.io";
 import pkg from "../package.json" with { type: "json" };
 import { connect } from "../src/connection.ts";
+import { Dispatcher } from "../src/dispatcher.ts";
+import { ping } from "../src/ops/ping.ts";
 import { PROTOCOL_VERSION, RUNNER_PATH, type ConnectErrorCode, type ConnectErrorData } from "../src/protocol.ts";
 
 const SLOW_RETRY_MS = 300;
@@ -31,7 +33,7 @@ async function startGateway(t: TestContext) {
 }
 
 function startRunner(t: TestContext, gatewayUrl: string, slowRetryMs = SLOW_RETRY_MS) {
-  const runner = connect({ gatewayUrl, token: "tok", clusterName: "c1" }, ["ping"], slowRetryMs);
+  const runner = connect({ gatewayUrl, token: "tok", clusterName: "c1" }, new Dispatcher([ping]), slowRetryMs);
   t.after(runner.stop);
   return runner;
 }
@@ -48,6 +50,17 @@ test("connects and sends its auth", async (t) => {
     protocolVersion: PROTOCOL_VERSION,
     ops: ["ping"],
   });
+});
+
+test("runs an op sent by the gateway and replies with the result", async (t) => {
+  const gateway = await startGateway(t);
+  startRunner(t, gateway.url);
+
+  const [socket] = await once(gateway.io, "connection");
+  const result = await socket.emitWithAck("op", { id: "req-1", op: "ping", args: {} });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.pong, true);
 });
 
 for (const code of ["UNAUTHORIZED", "UNSUPPORTED_PROTOCOL"] as const) {

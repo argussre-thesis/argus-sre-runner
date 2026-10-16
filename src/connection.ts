@@ -1,6 +1,7 @@
 import { io, type Socket } from "socket.io-client";
 import pkg from "../package.json" with { type: "json" };
 import type { Config } from "./config.ts";
+import type { Dispatcher } from "./dispatcher.ts";
 import { log } from "./log.ts";
 import {
   PROTOCOL_VERSION,
@@ -19,7 +20,7 @@ export type RunnerSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 // slowRetryMs is only changed by tests.
 export function connect(
   config: Config,
-  ops: string[],
+  dispatcher: Dispatcher,
   slowRetryMs = SLOW_RETRY_MS,
 ): { socket: RunnerSocket; stop: () => void } {
   const auth: RunnerAuth = {
@@ -27,12 +28,13 @@ export function connect(
     clusterName: config.clusterName,
     runnerVersion: pkg.version,
     protocolVersion: PROTOCOL_VERSION,
-    ops,
+    ops: dispatcher.opNames,
   };
   // WebSocket only: no HTTP long-polling start and upgrade (see CONTEXT §5.3).
   const socket: RunnerSocket = io(config.gatewayUrl, { path: RUNNER_PATH, auth, transports: ["websocket"] });
 
   socket.on("connect", () => log("info", "connected to gateway", { url: config.gatewayUrl, socketId: socket.id }));
+  socket.on("op", async (req, reply) => reply(await dispatcher.dispatch(req)));
   // Socket.IO gives up when the gateway refuses or drops us, so we retry ourselves, slowly.
   let retryTimer: NodeJS.Timeout | undefined;
   const retrySlowly = (msg: string, fields: Record<string, unknown>) => {

@@ -1,7 +1,9 @@
 import pkg from "../package.json" with { type: "json" };
 import { loadConfig, type Config } from "./config.ts";
 import { connect } from "./connection.ts";
+import { Dispatcher } from "./dispatcher.ts";
 import { log } from "./log.ts";
+import { ping } from "./ops/ping.ts";
 
 let config: Config;
 try {
@@ -13,8 +15,7 @@ try {
 
 log("info", "runner starting", { version: pkg.version, clusterName: config.clusterName });
 
-// The op list arrives with the dispatcher in step 3.
-const { stop } = connect(config, []);
+const { stop } = connect(config, new Dispatcher([ping]));
 
 // Kubernetes sends SIGTERM before killing a pod, Ctrl+C sends SIGINT. `once`: a second Ctrl+C kills right away.
 for (const signal of ["SIGTERM", "SIGINT"] as const) {
