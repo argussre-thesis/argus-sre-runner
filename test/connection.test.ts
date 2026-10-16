@@ -7,14 +7,14 @@ import { test, type TestContext } from "node:test";
 import { Server } from "socket.io";
 import pkg from "../package.json" with { type: "json" };
 import { connect } from "../src/connection.ts";
-import { Dispatcher } from "../src/dispatcher.ts";
+import { Dispatcher, type Op } from "../src/dispatcher.ts";
 import { ping } from "../src/ops/ping.ts";
 import { PROTOCOL_VERSION, RUNNER_PATH, type ConnectErrorCode, type ConnectErrorData } from "../src/protocol.ts";
 
 const SLOW_RETRY_MS = 300;
 
 // A bare gateway on a random port. It records every connection attempt and refuses while `refuse` is set.
-async function startGateway(t: TestContext) {
+async function startGateway(t: TestContext, port = 0) {
   const httpServer = createServer();
   const io = new Server(httpServer, { path: RUNNER_PATH });
   const gateway = { io, url: "", attempts: [] as number[], refuse: undefined as ConnectErrorCode | undefined };
@@ -25,15 +25,15 @@ async function startGateway(t: TestContext) {
     next(Object.assign(new Error("refused"), { data: { code: gateway.refuse } satisfies ConnectErrorData }));
   });
 
-  httpServer.listen(0, "127.0.0.1");
+  httpServer.listen(port, "127.0.0.1");
   await once(httpServer, "listening");
   gateway.url = `http://127.0.0.1:${(httpServer.address() as AddressInfo).port}`;
   t.after(() => io.close());
   return gateway;
 }
 
-function startRunner(t: TestContext, gatewayUrl: string, slowRetryMs = SLOW_RETRY_MS) {
-  const runner = connect({ gatewayUrl, token: "tok", clusterName: "c1" }, new Dispatcher([ping]), slowRetryMs);
+function startRunner(t: TestContext, gatewayUrl: string, slowRetryMs = SLOW_RETRY_MS, ops: Op[] = [ping]) {
+  const runner = connect({ gatewayUrl, token: "tok", clusterName: "c1" }, new Dispatcher(ops), slowRetryMs);
   t.after(runner.stop);
   return runner;
 }
@@ -61,6 +61,34 @@ test("runs an op sent by the gateway and replies with the result", async (t) => 
 
   assert.equal(result.ok, true);
   assert.equal(result.data.pong, true);
+});
+
+test("a reply from before a gateway restart doesn't answer an op on the new connection", async (t) => {
+  const sleepOp: Op<{ ms: number; n: number }> = {
+    name: "sleep",
+    parseArgs: (raw) => raw as { ms: number; n: number },
+    run: async ({ ms, n }) => {
+      await sleep(ms);
+      return n;
+    },
+  };
+  const first = await startGateway(t);
+  const runner = startRunner(t, first.url, SLOW_RETRY_MS, [sleepOp]);
+
+  const [oldSocket] = await once(first.io, "connection");
+  oldSocket.emit("op", { id: "old", op: "sleep", args: { ms: 2 * SLOW_RETRY_MS, n: 1 } }, () => {});
+  // Dropped by the gateway, so the runner reconnects after SLOW_RETRY_MS, while the old op is still running.
+  const dropped = new Promise((resolve) => runner.socket.once("disconnect", resolve));
+  oldSocket.disconnect(true);
+  await dropped;
+  await first.io.close();
+  // The restarted gateway's ack ids start at 0 again, the same id the old op had.
+  const second = await startGateway(t, Number(new URL(first.url).port));
+
+  const [newSocket] = await once(second.io, "connection");
+  const result = await newSocket.emitWithAck("op", { id: "new", op: "sleep", args: { ms: 2 * SLOW_RETRY_MS, n: 2 } });
+
+  assert.deepEqual(result, { ok: true, data: 2 });
 });
 
 for (const code of ["UNAUTHORIZED", "UNSUPPORTED_PROTOCOL"] as const) {

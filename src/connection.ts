@@ -34,7 +34,16 @@ export function connect(
   const socket: RunnerSocket = io(config.gatewayUrl, { path: RUNNER_PATH, auth, transports: ["websocket"] });
 
   socket.on("connect", () => log("info", "connected to gateway", { url: config.gatewayUrl, socketId: socket.id }));
-  socket.on("op", async (req, reply) => reply(await dispatcher.dispatch(req)));
+  socket.on("op", async (req, reply) => {
+    const connectionId = socket.id;
+    const result = await dispatcher.dispatch(req);
+    // On a new connection, ack ids can repeat (e.g. after a gateway restart), so the reply could answer a different op.
+    if (socket.id !== connectionId) {
+      log("warn", "reply dropped: the connection changed while the op ran", { id: req.id, op: req.op });
+      return;
+    }
+    reply(result);
+  });
   // Socket.IO gives up when the gateway refuses or drops us, so we retry ourselves, slowly.
   let retryTimer: NodeJS.Timeout | undefined;
   const retrySlowly = (msg: string, fields: Record<string, unknown>) => {
