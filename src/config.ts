@@ -4,6 +4,7 @@ export interface Config {
   gatewayUrl: string;
   token: string;
   clusterName: string;
+  kubeApiUrl?: string;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -13,15 +14,19 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     return value;
   };
 
-  const gatewayUrl = required("GATEWAY_URL");
-  const protocol = URL.parse(gatewayUrl)?.protocol;
-  if (protocol !== "http:" && protocol !== "https:") {
-    throw new Error(`GATEWAY_URL must start with http:// or https://, got "${gatewayUrl}"`);
-  }
+  const httpUrl = (name: string, value: string): string => {
+    const protocol = URL.parse(value)?.protocol;
+    if (protocol !== "http:" && protocol !== "https:") {
+      throw new Error(`${name} must start with http:// or https://, got "${value}"`);
+    }
+    return value;
+  };
 
   return {
-    gatewayUrl,
+    gatewayUrl: httpUrl("GATEWAY_URL", required("GATEWAY_URL")),
     token: required("RUNNER_TOKEN"),
     clusterName: required("CLUSTER_NAME"),
+    // Set it only when running the runner outside a K8s cluster.
+    kubeApiUrl: env.KUBE_API_URL ? httpUrl("KUBE_API_URL", env.KUBE_API_URL) : undefined,
   };
 }
