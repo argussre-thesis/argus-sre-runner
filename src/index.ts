@@ -2,20 +2,28 @@ import pkg from "../package.json" with { type: "json" };
 import { loadConfig, type Config } from "./config.ts";
 import { connect } from "./connection.ts";
 import { Dispatcher } from "./dispatcher.ts";
+import { KubeClient } from "./kubernetes/client.ts";
 import { log } from "./log.ts";
+import { listPods } from "./ops/kubernetes/list-pods.ts";
 import { ping } from "./ops/ping.ts";
 
 let config: Config;
+let kube: KubeClient;
 try {
   config = loadConfig();
+  kube = config.kubeApiUrl ? new KubeClient({ baseUrl: config.kubeApiUrl }) : KubeClient.inCluster();
 } catch (err) {
   log("error", "invalid configuration", { error: (err as Error).message });
   process.exit(1);
 }
 
-log("info", "runner starting", { version: pkg.version, clusterName: config.clusterName });
+log("info", "runner starting", {
+  version: pkg.version,
+  clusterName: config.clusterName,
+  kubeApi: config.kubeApiUrl ?? "in-cluster",
+});
 
-const { stop } = connect(config, new Dispatcher([ping]));
+const { stop } = connect(config, new Dispatcher([ping, listPods(kube)]));
 
 // Kubernetes sends SIGTERM before killing a pod, Ctrl+C sends SIGINT. `once`: a second Ctrl+C kills right away.
 for (const signal of ["SIGTERM", "SIGINT"] as const) {
