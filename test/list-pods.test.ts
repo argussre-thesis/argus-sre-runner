@@ -1,9 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { Dispatcher } from "../src/dispatcher.ts";
-import type { KubeApi, Query } from "../src/kubernetes/client.ts";
 import { podStatus, summarizePod, type Pod } from "../src/kubernetes/pods.ts";
 import { listPods } from "../src/ops/kubernetes/list-pods.ts";
+import { fakeKube } from "./helpers.ts";
 
 const crashLooping: Pod = {
   metadata: {
@@ -96,36 +95,20 @@ test("podStatus: close to kubectl's STATUS column", () => {
   for (const [expected, p] of cases) assert.equal(podStatus(p), expected, expected);
 });
 
-function fakeKube(list: unknown) {
-  const calls: { path: string; query?: Query }[] = [];
-  const kube: KubeApi = {
-    async getJson<T>(path: string, query?: Query) {
-      calls.push({ path, query });
-      return list as T;
-    },
-    async getText() {
-      throw new Error("list_pods doesn't call getText");
-    },
-  };
-  const dispatcher = new Dispatcher([listPods(kube)]);
-  const run = (args: Record<string, unknown>) => dispatcher.dispatch({ id: "t", op: "list_pods", args });
-  return { calls, run };
-}
-
 test("list_pods: calls the namespace's pods endpoint with the selector and the limit", async () => {
-  const { calls, run } = fakeKube({ items: [crashLooping] });
+  const { calls, run } = fakeKube(listPods, { items: [crashLooping] });
   const result = await run({ namespace: "payments", labelSelector: "app=api" });
   assert.deepEqual(calls, [{ path: "/api/v1/namespaces/payments/pods", query: { labelSelector: "app=api", limit: 500 } }]);
   assert.deepEqual(result, { ok: true, data: { pods: [summarizePod(crashLooping)], truncated: false } });
 });
 
 test("list_pods: more pods than the limit is truncated: true", async () => {
-  const { run } = fakeKube({ metadata: { continue: "abc" }, items: [] });
+  const { run } = fakeKube(listPods, { metadata: { continue: "abc" }, items: [] });
   assert.deepEqual(await run({ namespace: "payments" }), { ok: true, data: { pods: [], truncated: true } });
 });
 
 test("list_pods: bad args are rejected before calling the API", async () => {
-  const { calls, run } = fakeKube({ items: [] });
+  const { calls, run } = fakeKube(listPods, { items: [] });
   for (const args of [{}, { namespace: ".." }, { namespace: "demo", labelSelecter: "app=api" }]) {
     const result = await run(args);
     assert.equal(result.ok ? "ok" : result.error.code, "BAD_REQUEST", JSON.stringify(args));
