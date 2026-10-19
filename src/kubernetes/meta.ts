@@ -5,7 +5,20 @@ export interface ObjectMeta {
   generation?: number;
   creationTimestamp?: string;
   deletionTimestamp?: string;
+  labels?: Record<string, string>;
   ownerReferences?: { kind: string; name: string }[];
+}
+
+export interface Condition {
+  type: string;
+  status: string;
+  reason?: string;
+  message?: string;
+  lastTransitionTime?: string;
+}
+
+export function summarizeCondition(c: Condition) {
+  return { type: c.type, status: c.status, reason: c.reason, message: c.message, since: c.lastTransitionTime };
 }
 
 // `continue` is set when the API has more items than `limit` returned.

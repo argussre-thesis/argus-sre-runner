@@ -31,3 +31,14 @@ export function requiredLabelName(args: Record<string, unknown>, name: string): 
   }
   return value;
 }
+
+// Pod and most other object names may contain dots, but each dot-separated part starts with a letter or digit, so ".." still fails.
+const DNS1123_SUBDOMAIN = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/;
+
+export function requiredObjectName(args: Record<string, unknown>, name: string): string {
+  const value = requiredString(args, name);
+  if (value.length > 253 || !DNS1123_SUBDOMAIN.test(value)) {
+    throw new OpError("BAD_REQUEST", `"${name}" must be a valid Kubernetes object name (lowercase letters, digits, "-", "."; max 253 chars)`);
+  }
+  return value;
+}

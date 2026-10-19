@@ -29,7 +29,7 @@ const crashLooping: Pod = {
 
 const pod = (status: Pod["status"], meta: Partial<Pod["metadata"]> = {}): Pod => ({
   metadata: { name: "p", ...meta },
-  spec: { containers: [{}] },
+  spec: { containers: [{ name: "c" }] },
   status,
 });
 const container = (state: object) => ({ name: "c", image: "i", ready: false, restartCount: 0, state });

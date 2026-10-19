@@ -4,6 +4,7 @@ import { connect } from "./connection.ts";
 import { Dispatcher } from "./dispatcher.ts";
 import { KubeClient } from "./kubernetes/client.ts";
 import { log } from "./log.ts";
+import { getPod } from "./ops/kubernetes/get-pod.ts";
 import { listDeployments } from "./ops/kubernetes/list-deployments.ts";
 import { listPods } from "./ops/kubernetes/list-pods.ts";
 import { ping } from "./ops/ping.ts";
@@ -24,7 +25,7 @@ log("info", "runner starting", {
   kubeApi: config.kubeApiUrl ?? "in-cluster",
 });
 
-const { stop } = connect(config, new Dispatcher([ping, listPods(kube), listDeployments(kube)]));
+const { stop } = connect(config, new Dispatcher([ping, listPods(kube), getPod(kube), listDeployments(kube)]));
 
 // Kubernetes sends SIGTERM before killing a pod, Ctrl+C sends SIGINT. `once`: a second Ctrl+C kills right away.
 for (const signal of ["SIGTERM", "SIGINT"] as const) {
