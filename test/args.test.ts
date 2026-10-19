@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { optionalString, requiredLabelName, requiredObjectName, requiredString } from "../src/ops/args.ts";
+import { optionalInt, optionalString, requiredLabelName, requiredObjectName, requiredString } from "../src/ops/args.ts";
 
 test("requiredLabelName accepts valid namespace names", () => {
   for (const namespace of ["demo", "kube-system", "a", "team-1", "x".repeat(63)]) {
@@ -30,8 +30,20 @@ test("requiredString: missing, empty or not a string is BAD_REQUEST", () => {
   }
 });
 
-test("optionalString: absent is undefined, otherwise checked like requiredString", () => {
+test("optionalInt: absent or null is undefined, otherwise an integer in range", () => {
+  const range = { min: 1, max: 3600 };
+  assert.equal(optionalInt({}, "s", range), undefined);
+  assert.equal(optionalInt({ s: null }, "s", range), undefined);
+  assert.equal(optionalInt({ s: 1 }, "s", range), 1);
+  assert.equal(optionalInt({ s: 3600 }, "s", range), 3600);
+  for (const s of [0, 3601, 1.5, "900", true]) {
+    assert.throws(() => optionalInt({ s }, "s", range, " (why)"), { code: "BAD_REQUEST", message: '"s" must be an integer between 1 and 3600 (why)' });
+  }
+});
+
+test("optionalString: absent or null is undefined, otherwise checked like requiredString", () => {
   assert.equal(optionalString({}, "labelSelector"), undefined);
+  assert.equal(optionalString({ labelSelector: null }, "labelSelector"), undefined);
   assert.equal(optionalString({ labelSelector: "app=api" }, "labelSelector"), "app=api");
   assert.throws(() => optionalString({ labelSelector: "" }, "labelSelector"), { code: "BAD_REQUEST" });
 });

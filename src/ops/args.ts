@@ -16,9 +16,24 @@ export function requiredString(args: Record<string, unknown>, name: string): str
   return value;
 }
 
+// `null` counts as not given: models often send it for an arg they skip.
 export function optionalString(args: Record<string, unknown>, name: string): string | undefined {
-  if (args[name] === undefined) return undefined;
+  if (args[name] == null) return undefined;
   return requiredString(args, name);
+}
+
+export function optionalInt(
+  args: Record<string, unknown>,
+  name: string,
+  range: { min: number; max: number },
+  why = "",
+): number | undefined {
+  const value = args[name];
+  if (value == null) return undefined;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < range.min || value > range.max) {
+    throw new OpError("BAD_REQUEST", `"${name}" must be an integer between ${range.min} and ${range.max}${why}`);
+  }
+  return value;
 }
 
 // Names go into URL paths, so this strict check also blocks tricks like "..".
@@ -35,9 +50,13 @@ export function requiredLabelName(args: Record<string, unknown>, name: string): 
 // Pod and most other object names may contain dots, but each dot-separated part starts with a letter or digit, so ".." still fails.
 const DNS1123_SUBDOMAIN = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/;
 
+export function isObjectName(value: string): boolean {
+  return value.length <= 253 && DNS1123_SUBDOMAIN.test(value);
+}
+
 export function requiredObjectName(args: Record<string, unknown>, name: string): string {
   const value = requiredString(args, name);
-  if (value.length > 253 || !DNS1123_SUBDOMAIN.test(value)) {
+  if (!isObjectName(value)) {
     throw new OpError("BAD_REQUEST", `"${name}" must be a valid Kubernetes object name (lowercase letters, digits, "-", "."; max 253 chars)`);
   }
   return value;

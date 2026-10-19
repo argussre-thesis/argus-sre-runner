@@ -1,13 +1,14 @@
 import { Dispatcher, type Op } from "../src/dispatcher.ts";
 import type { KubeApi, Query } from "../src/kubernetes/client.ts";
 
-// Runs one op through the dispatcher against a fake API that answers every getJson with `response`.
+// Runs one op through the dispatcher against a fake API that answers every getJson with `response`,
+// or with `response(query)` when it's a function (pages).
 export function fakeKube(makeOp: (kube: KubeApi) => Op, response: unknown) {
   const calls: { path: string; query?: Query }[] = [];
   const kube: KubeApi = {
     async getJson<T>(path: string, query?: Query) {
       calls.push({ path, query });
-      return response as T;
+      return (typeof response === "function" ? response(query) : response) as T;
     },
     async getText() {
       throw new Error("getText isn't faked");
