@@ -85,6 +85,10 @@ test("a body over the 8 MB cap is TOO_LARGE", async () => {
   await assert.rejects(kube().getText("/huge"), { code: "TOO_LARGE" });
 });
 
+test("getText takes a smaller cap per call", async () => {
+  await assert.rejects(kube().getText("/ok", {}, undefined, 5), { code: "TOO_LARGE", message: /exceeded 5 bytes/ });
+});
+
 test("the signal stops the request", async () => {
   const started = Date.now();
   await assert.rejects(kube().getJson("/slow", {}, AbortSignal.timeout(50)), { name: "AbortError" });

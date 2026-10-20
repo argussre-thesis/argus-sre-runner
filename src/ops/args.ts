@@ -36,6 +36,13 @@ export function optionalInt(
   return value;
 }
 
+export function optionalBool(args: Record<string, unknown>, name: string): boolean | undefined {
+  const value = args[name];
+  if (value == null) return undefined;
+  if (typeof value !== "boolean") throw new OpError("BAD_REQUEST", `"${name}" must be true or false`);
+  return value;
+}
+
 // Names go into URL paths, so this strict check also blocks tricks like "..".
 const DNS1123_LABEL = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;
 

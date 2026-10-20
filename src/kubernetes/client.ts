@@ -10,7 +10,7 @@ export type Query = Record<string, string | number | boolean | undefined>;
 
 export interface KubeApi {
   getJson<T>(path: string, query?: Query, signal?: AbortSignal): Promise<T>;
-  getText(path: string, query?: Query, signal?: AbortSignal): Promise<string>;
+  getText(path: string, query?: Query, signal?: AbortSignal, maxBytes?: number): Promise<string>;
 }
 
 interface KubeClientOptions {
@@ -47,7 +47,7 @@ export class KubeClient implements KubeApi {
     return JSON.parse(await this.getText(path, query, signal)) as T;
   }
 
-  async getText(path: string, query: Query = {}, signal?: AbortSignal): Promise<string> {
+  async getText(path: string, query: Query = {}, signal?: AbortSignal, maxBytes = MAX_BODY_BYTES): Promise<string> {
     const url = new URL(path, this.baseUrl);
     for (const [key, value] of Object.entries(query)) {
       if (value !== undefined) url.searchParams.set(key, String(value));
@@ -56,7 +56,7 @@ export class KubeClient implements KubeApi {
     // Re-read every request: the kubelet rotates this token file before it expires.
     if (this.tokenFile) headers.Authorization = `Bearer ${(await readFile(this.tokenFile, "utf8")).trim()}`;
 
-    const { status, body } = await httpGet(url, { headers, ca: this.ca, signal, maxBytes: MAX_BODY_BYTES });
+    const { status, body } = await httpGet(url, { headers, ca: this.ca, signal, maxBytes });
     if (status >= 400) throw toOpError(status, body);
     return body;
   }

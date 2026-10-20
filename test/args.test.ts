@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { optionalInt, optionalString, requiredLabelName, requiredObjectName, requiredString } from "../src/ops/args.ts";
+import { optionalBool, optionalInt, optionalString, requiredLabelName, requiredObjectName, requiredString } from "../src/ops/args.ts";
 
 test("requiredLabelName accepts valid namespace names", () => {
   for (const namespace of ["demo", "kube-system", "a", "team-1", "x".repeat(63)]) {
@@ -38,6 +38,16 @@ test("optionalInt: absent or null is undefined, otherwise an integer in range", 
   assert.equal(optionalInt({ s: 3600 }, "s", range), 3600);
   for (const s of [0, 3601, 1.5, "900", true]) {
     assert.throws(() => optionalInt({ s }, "s", range, " (why)"), { code: "BAD_REQUEST", message: '"s" must be an integer between 1 and 3600 (why)' });
+  }
+});
+
+test("optionalBool: absent or null is undefined, otherwise only true or false", () => {
+  assert.equal(optionalBool({}, "previous"), undefined);
+  assert.equal(optionalBool({ previous: null }, "previous"), undefined);
+  assert.equal(optionalBool({ previous: true }, "previous"), true);
+  assert.equal(optionalBool({ previous: false }, "previous"), false);
+  for (const previous of ["true", 1, 0]) {
+    assert.throws(() => optionalBool({ previous }, "previous"), { code: "BAD_REQUEST", message: '"previous" must be true or false' });
   }
 });
 
