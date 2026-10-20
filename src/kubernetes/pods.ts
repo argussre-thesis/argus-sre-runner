@@ -42,7 +42,7 @@ interface Probe {
   failureThreshold?: number;
 }
 
-interface ContainerSpec {
+export interface ContainerSpec {
   name: string;
   image?: string;
   command?: string[];
@@ -144,8 +144,8 @@ export function describePod(pod: Pod) {
   };
 }
 
-function describeContainer(c: ContainerSpec, status: ContainerStatus | undefined) {
-  const last = status?.lastState?.terminated;
+// Also the pod template of a ReplicaSet.
+export function describeContainerSpec(c: ContainerSpec) {
   return {
     name: c.name,
     image: c.image,
@@ -162,6 +162,13 @@ function describeContainer(c: ContainerSpec, status: ContainerStatus | undefined
     envFrom: c.envFrom?.map((e) =>
       e.secretRef ? `secret ${e.secretRef.name}` : e.configMapRef ? `configMap ${e.configMapRef.name}` : "unknown",
     ),
+  };
+}
+
+function describeContainer(c: ContainerSpec, status: ContainerStatus | undefined) {
+  const last = status?.lastState?.terminated;
+  return {
+    ...describeContainerSpec(c),
     ready: status?.ready,
     restarts: status?.restartCount,
     state: describeState(status?.state),

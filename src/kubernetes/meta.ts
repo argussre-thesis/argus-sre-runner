@@ -6,6 +6,8 @@ export interface ObjectMeta {
   creationTimestamp?: string;
   deletionTimestamp?: string;
   labels?: Record<string, string>;
+  // Read by key only, never returned whole: last-applied-configuration holds env values.
+  annotations?: Record<string, string>;
   ownerReferences?: { kind: string; name: string }[];
 }
 
