@@ -11,16 +11,13 @@
     "start": "node src/index.ts",
     "dev": "node --env-file=dev/runner.env src/index.ts",
     "typecheck": "tsc --noEmit",
-    "test": "node --test --test-timeout=10000 --test-force-exit \"test/**/*.test.ts\"",
-    "dev:gateway": "node dev/gateway.ts"
+    "test": "node --test --test-timeout=10000 --test-force-exit \"test/**/*.test.ts\""
   },
   "dependencies": {
     "socket.io-client": "^4.8.4"
   },
   "devDependencies": {
-    "@types/express": "^5.0.6",
     "@types/node": "^24.19.2",
-    "express": "^5.3.0",
     "socket.io": "^4.8.4",
     "typescript": "^7.0.2"
   }
