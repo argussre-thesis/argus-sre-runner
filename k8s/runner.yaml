@@ -51,7 +51,7 @@ metadata:
   namespace: argus-runner
 type: Opaque
 stringData:
-  token: dev-token
+  token: argus_rt_q235KEC8L4CKuKXm-g8USSUE9vMVGGVxT3uRiLG4_HQ
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -80,14 +80,13 @@ spec:
           type: RuntimeDefault
       containers:
         - name: runner
-          image: argus-sre-runner:dev
-          # Built inside minikube (minikube image build), not in a registry.
-          imagePullPolicy: Never
+          image: tsandas/argus-sre-runner:c80c77e
+          imagePullPolicy: IfNotPresent
           env:
             - name: GATEWAY_URL
-              value: http://host.minikube.internal:8080
+              value: https://gateway.argussre.com
             - name: CLUSTER_NAME
-              value: minikube
+              value: civo-fra1
             - name: RUNNER_TOKEN
               valueFrom:
                 secretKeyRef:
@@ -101,3 +100,5 @@ spec:
             readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
+
+# argus_rt_cVaeJyLO2xKNkdJ6w4E0-lGVm9NrteBeqxQQplACoF0

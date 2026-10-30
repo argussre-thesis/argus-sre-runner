@@ -1,0 +1,103 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: argus-runner-staging
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argus-runner
+  namespace: argus-runner-staging
+---
+# Only what the ops read; each new op adds its resource here. Never Secrets.
+# Own name, not prod's: cluster-wide objects with the same name would overwrite prod's on apply.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: argus-runner-staging-readonly
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["list"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list"]
+  - apiGroups: ["apps"]
+    resources: ["replicasets"]
+    verbs: ["list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argus-runner-staging-readonly
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: argus-runner-staging-readonly
+subjects:
+  - kind: ServiceAccount
+    name: argus-runner
+    namespace: argus-runner-staging
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: argus-runner-token
+  namespace: argus-runner-staging
+type: Opaque
+stringData:
+  token: argus_rt_4TxtW-ac3KGk8oOMGROLItZWPijnx1AJcq3FbKMhXR4
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argus-runner
+  namespace: argus-runner-staging
+  labels:
+    app: argus-runner
+spec:
+  replicas: 1
+  # Two pods with one token would keep replacing each other's connection.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: argus-runner
+  template:
+    metadata:
+      labels:
+        app: argus-runner
+    spec:
+      serviceAccountName: argus-runner
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: runner
+          image: tsandas/argus-sre-runner:c80c77e
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: GATEWAY_URL
+              value: https://staging.gateway.argussre.com
+            - name: CLUSTER_NAME
+              value: civo-fra1
+            - name: RUNNER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: argus-runner-token
+                  key: token
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { cpu: 200m, memory: 128Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
