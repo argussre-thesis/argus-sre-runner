@@ -51,7 +51,7 @@ metadata:
   namespace: argus-runner
 type: Opaque
 stringData:
-  token: argus_rt_q235KEC8L4CKuKXm-g8USSUE9vMVGGVxT3uRiLG4_HQ
+  token: argus_rt_ntJWPQstQ7ODJen1wSoQcMUnC64k6qCAhEsxRvZCOe8
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -86,7 +86,7 @@ spec:
             - name: GATEWAY_URL
               value: https://gateway.argussre.com
             - name: CLUSTER_NAME
-              value: civo-fra1
+              value: civo-lon1
             - name: RUNNER_TOKEN
               valueFrom:
                 secretKeyRef:
