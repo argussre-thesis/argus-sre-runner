@@ -27,6 +27,9 @@ rules:
   - apiGroups: [""]
     resources: ["namespaces"]
     verbs: ["list"]
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["list"]
   - apiGroups: ["apps"]
     resources: ["deployments"]
     verbs: ["get", "list"]
@@ -54,7 +57,7 @@ metadata:
   namespace: argus-runner
 type: Opaque
 stringData:
-  token: argus_rt_ntJWPQstQ7ODJen1wSoQcMUnC64k6qCAhEsxRvZCOe8
+  token: argus_rt_MSv1aIDSHIrCzML7ueo4uXqeZgK-iYxomIoB4A9D5d8
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -89,7 +92,7 @@ spec:
             - name: GATEWAY_URL
               value: https://gateway.argussre.com
             - name: CLUSTER_NAME
-              value: civo-lon1
+              value: civo-fra1
             - name: RUNNER_TOKEN
               valueFrom:
                 secretKeyRef:

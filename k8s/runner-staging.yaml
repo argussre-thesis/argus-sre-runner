@@ -28,6 +28,9 @@ rules:
   - apiGroups: [""]
     resources: ["namespaces"]
     verbs: ["list"]
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["list"]
   - apiGroups: ["apps"]
     resources: ["deployments"]
     verbs: ["get", "list"]
@@ -55,7 +58,7 @@ metadata:
   namespace: argus-runner-staging
 type: Opaque
 stringData:
-  token: argus_rt_EDxRW32N6LM8PqIPO8gXXKQnWOHcvzjhBn6Wziao9_0
+  token: argus_rt_jqI8dVmK-qAvC49-yxKg0U1LcqOfbJNg4L0rj5DdmUc
 ---
 apiVersion: apps/v1
 kind: Deployment

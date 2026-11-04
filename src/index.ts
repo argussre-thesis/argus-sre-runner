@@ -9,6 +9,7 @@ import { getPod } from "./ops/kubernetes/get-pod.ts";
 import { listDeployments } from "./ops/kubernetes/list-deployments.ts";
 import { listEvents } from "./ops/kubernetes/list-events.ts";
 import { listNamespaces } from "./ops/kubernetes/list-namespaces.ts";
+import { listNodes } from "./ops/kubernetes/list-nodes.ts";
 import { listPods } from "./ops/kubernetes/list-pods.ts";
 import { listReplicaSets } from "./ops/kubernetes/list-replicasets.ts";
 import { ping } from "./ops/ping.ts";
@@ -34,6 +35,7 @@ const { stop } = connect(
   new Dispatcher([
     ping,
     listNamespaces(kube),
+    listNodes(kube),
     listPods(kube),
     getPod(kube),
     getLogs(kube),
