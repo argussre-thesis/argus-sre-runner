@@ -2,6 +2,7 @@ export const LIST_LIMIT = 500;
 
 export interface ObjectMeta {
   name: string;
+  namespace?: string;
   generation?: number;
   creationTimestamp?: string;
   deletionTimestamp?: string;

@@ -119,6 +119,17 @@ export function podStatus(pod: Pod): string {
   return reason ?? pod.status?.reason ?? pod.status?.phase ?? "Unknown";
 }
 
+const ONE_HOUR_MS = 3_600_000;
+export function isProblemPod(pod: Pod, now: number): boolean {
+  if (pod.status?.phase === "Succeeded") return false; // for Jobs, CronJobs, etc.
+  const containers = pod.status?.containerStatuses ?? [];
+  return (
+    podStatus(pod) !== "Running" ||
+    containers.some((c) => !c.ready) ||
+    containers.some((c) => Date.parse(c.lastState?.terminated?.finishedAt ?? "") > now - ONE_HOUR_MS) // recently terminated
+  );
+}
+
 // Like `kubectl describe pod`, without annotations or env var values.
 export function describePod(pod: Pod) {
   // Container names are unique across init and regular containers.

@@ -11,6 +11,7 @@ import { listEvents } from "./ops/kubernetes/list-events.ts";
 import { listNamespaces } from "./ops/kubernetes/list-namespaces.ts";
 import { listNodes } from "./ops/kubernetes/list-nodes.ts";
 import { listPods } from "./ops/kubernetes/list-pods.ts";
+import { listProblemPods } from "./ops/kubernetes/list-problem-pods.ts";
 import { listReplicaSets } from "./ops/kubernetes/list-replicasets.ts";
 import { ping } from "./ops/ping.ts";
 
@@ -36,6 +37,7 @@ const { stop } = connect(
     ping,
     listNamespaces(kube),
     listNodes(kube),
+    listProblemPods(kube),
     listPods(kube),
     getPod(kube),
     getLogs(kube),
