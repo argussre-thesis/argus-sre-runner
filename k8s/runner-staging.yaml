@@ -25,6 +25,9 @@ rules:
   - apiGroups: [""]
     resources: ["events"]
     verbs: ["list"]
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["list"]
   - apiGroups: ["apps"]
     resources: ["deployments"]
     verbs: ["get", "list"]
@@ -52,7 +55,7 @@ metadata:
   namespace: argus-runner-staging
 type: Opaque
 stringData:
-  token: argus_rt_4TxtW-ac3KGk8oOMGROLItZWPijnx1AJcq3FbKMhXR4
+  token: argus_rt_EDxRW32N6LM8PqIPO8gXXKQnWOHcvzjhBn6Wziao9_0
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -87,7 +90,7 @@ spec:
             - name: GATEWAY_URL
               value: https://staging.gateway.argussre.com
             - name: CLUSTER_NAME
-              value: civo-fra1
+              value: civo-lon1
             - name: RUNNER_TOKEN
               valueFrom:
                 secretKeyRef:
