@@ -19,6 +19,8 @@ spec:
       app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
+      annotations:
+        checksum/token: {{ .Values.token | sha256sum }}
       labels:
         app.kubernetes.io/name: argus-runner
         app.kubernetes.io/instance: {{ .Release.Name }}
