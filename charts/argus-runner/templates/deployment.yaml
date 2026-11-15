@@ -1,6 +1,3 @@
-{{- if eq (empty .Values.token) (empty .Values.existingSecret) }}
-{{- fail "set exactly one of token or existingSecret" }}
-{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -19,8 +16,6 @@ spec:
       app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
-      annotations:
-        checksum/token: {{ .Values.token | sha256sum }}
       labels:
         app.kubernetes.io/name: argus-runner
         app.kubernetes.io/instance: {{ .Release.Name }}
@@ -42,7 +37,7 @@ spec:
             - name: RUNNER_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.existingSecret | default .Release.Name }}
+                  name: {{ required "existingSecret is required" .Values.existingSecret }}
                   key: token
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

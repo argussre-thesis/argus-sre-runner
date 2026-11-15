@@ -6,8 +6,7 @@ image:
 gatewayUrl: ""
 clusterName: ""
 
-# Set one: token creates the Secret, existingSecret uses yours (key "token").
-token: ""
+# Created by hand, key "token". The pod reads it only at startup: after rotating it, kubectl rollout restart.
 existingSecret: ""
 
 resources:
