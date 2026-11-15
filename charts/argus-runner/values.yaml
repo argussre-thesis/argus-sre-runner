@@ -1,0 +1,15 @@
+image:
+  repository: tsandas/argus-sre-runner
+  tag: ""
+  pullPolicy: IfNotPresent
+
+gatewayUrl: ""
+clusterName: ""
+
+# Set one: token creates the Secret, existingSecret uses yours (key "token").
+token: ""
+existingSecret: ""
+
+resources:
+  requests: { cpu: 50m, memory: 64Mi }
+  limits: { cpu: 200m, memory: 128Mi }
