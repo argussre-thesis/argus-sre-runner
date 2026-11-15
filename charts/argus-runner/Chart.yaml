@@ -3,3 +3,4 @@ name: argus-runner
 description: Read-only Argus SRE runner for a Kubernetes cluster
 type: application
 version: 0.1.0
+appVersion: "6653b15"
