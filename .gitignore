@@ -2,3 +2,8 @@ node_modules/
 notes.txt
 dev/
 k8s/
+.claude/
+.agents/
+CLAUDE.md
+AGENTS.md
+CONTEXT.md
